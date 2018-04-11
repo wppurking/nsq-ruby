@@ -92,7 +92,8 @@ module Nsq
         port: port,
         ssl_context: @ssl_context,
         tls_options: @tls_options,
-        tls_v1: @tls_v1
+        tls_v1: @tls_v1,
+        sync_write: @sync_write
       }.merge(options))
       @connections[nsqd] = connection
     end

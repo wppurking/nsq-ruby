@@ -11,6 +11,7 @@ module Nsq
       @ssl_context = opts[:ssl_context]
       @tls_options = opts[:tls_options]
       @tls_v1 = opts[:tls_v1]
+      @sync_write = opts[:sync_write] || false
 
       nsqlookupds = []
       if opts[:nsqlookupd]

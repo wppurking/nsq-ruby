@@ -33,6 +33,9 @@ module Nsq
       @max_in_flight = opts[:max_in_flight] || 1
       @tls_options = opts[:tls_options]
       @max_attempts = opts[:max_attempts]
+      # sync_write
+      @sync_write = opts[:sync_write] || false
+
       if opts[:ssl_context]
         if @tls_options
           warn 'ssl_context and tls_options both set. Using tls_options. Ignoring ssl_context.'
@@ -140,7 +143,8 @@ module Nsq
     private
 
     def cls
-      write "CLS\n"
+      # only have topic in sub mode can use CLS command
+      write "CLS\n" if @topic
     end
 
 
@@ -150,7 +154,29 @@ module Nsq
 
 
     def write(raw)
-      @write_queue.push(raw)
+      if @sync_write
+        write_receive(raw)
+      else
+        @write_queue.push(raw)
+      end
+      @write_queue
+    end
+
+    # write and receive in sync
+    def write_receive(raw)
+      write_to_socket(raw)
+      frame = receive_frame
+      if frame.is_a?(Response)
+        handle_response(frame)
+      elsif frame.is_a?(Error)
+        error "Error received: #{frame.data}"
+      elsif frame.is_a?(Message)
+        error "Message should't be here"
+      else
+        raise 'No data from socket'
+      end
+    rescue Exception => ex
+      die(ex)
     end
 
 
@@ -232,6 +258,7 @@ module Nsq
 
 
     def start_read_loop
+      return if @sync_write
       @read_loop_thread ||= Thread.new{read_loop}
     end
 
@@ -266,7 +293,8 @@ module Nsq
 
 
     def start_write_loop
-      @write_loop_thread ||= Thread.new{write_loop}
+      return if @sync_write
+      @write_loop_thread ||= Thread.new { write_loop }
     end
 
 
@@ -298,7 +326,7 @@ module Nsq
 
     # Waits for death of connection
     def start_monitoring_connection
-      @connection_monitor_thread ||= Thread.new{monitor_connection}
+      @connection_monitor_thread ||= Thread.new { monitor_connection }
       @connection_monitor_thread.abort_on_exception = true
     end
 
