@@ -294,7 +294,7 @@ module Nsq
 
     def start_write_loop
       return if @sync_write
-      @write_loop_thread ||= Thread.new { write_loop }
+      @write_loop_thread ||= Thread.new{write_loop}
     end
 
 
@@ -326,7 +326,7 @@ module Nsq
 
     # Waits for death of connection
     def start_monitoring_connection
-      @connection_monitor_thread ||= Thread.new { monitor_connection }
+      @connection_monitor_thread ||= Thread.new{monitor_connection}
       @connection_monitor_thread.abort_on_exception = true
     end
 
